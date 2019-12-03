@@ -1,0 +1,133 @@
+<div class="container">
+  <div class="row mt-5">
+    <div class="col-12 text-center">
+      <h3>Easily Bulk Edit RPG Maker MV JSON Files</h3>
+    </div>
+  </div>
+  <hr>
+  <div class="row mt-3">
+    <div class="col-12">
+      <div id="append_json_container" style="display: none;">
+        <h5>
+          Event -> Page -> List codes matching 101 (drawFace):
+        </h5>
+        <code id="append_json" class="overflow-auto">
+        </code>
+      </div>
+      <hr>
+      <div id="form_container" class="mt-3" style="display: none;">
+        <%= form_tag('/generate_json', method: :post) do %>
+          <div class="form-group">
+            <%= label_tag :new_name, 'New Face Asset File Name' %>
+            <%= text_field_tag 'upload[new_name]', nil, class: 'form-control col-6' %>
+          </div>
+
+          <div class="form-group">
+            <%= label_tag :new_face_index, 'New Face Index' %>
+            <%= select_tag 'upload[new_face_index]', options_for_select([0, 1, 2, 3, 4, 5, 6, 7]), class: 'form-control col-6' %>
+          </div>
+
+          <div class="form-group">
+            <%= label_tag :old_name, 'Old Face Asset File Name' %>
+            <%= select_tag 'upload[old_name]', nil, class: 'form-control col-6', id: 'old_name' %>
+          </div>
+
+          <div class="form-group">
+            <%= label_tag :old_face_index, 'Old Face Index' %>
+            <%= select_tag 'upload[old_face_index]', nil, class: 'form-control col-6', id: 'old_face_index' %>
+          </div>
+
+          <%= hidden_field_tag('upload[data]') %>
+          <%= submit_tag 'Get New JSON', class: 'btn btn-lg btn-primary' %>
+        <% end %>
+      </div>
+
+      <%= form_tag('/upload_json', method: :post, data: {remote: true, type: 'json'}) do %>
+        <%= file_field_tag(:json_file, id: 'select_file') %>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<script>
+  function iterateEvents(data) {
+    const pagesWithFacesDrawn = [];
+    const replaceFileNames = [];
+    const replaceFileIndices = [];
+    const events = data.events;
+    for(let i = 0; i < events.length; i++) {
+      if (!events[i]) { continue; }
+      const pages = events[i].pages;
+      for (let j = 0; j < pages.length; j++) {
+        const page = pages[j];
+        const items = page.list;
+        for (let k = 0; k < items.length; k++) {
+          const item = items[k];
+          if (item.code == 101) {
+            pagesWithFacesDrawn.push(page);
+            if (item.parameters[0] !== '') {
+              replaceFileNames.push(item.parameters[0]);
+              replaceFileIndices.push(item.parameters[1]);
+            }
+          }
+        }
+      }
+    }
+    return {
+      displayPages: pagesWithFacesDrawn,
+      replaceNames: replaceFileNames,
+      replaceIndices: replaceFileIndices
+    };
+  }
+
+  function appendReplacements(replacements, parentId) {
+    console.log(replacements);
+    for(let i = 0; i < replacements.length; i++) {
+      if ( i < 1) {
+        $(`<option value="${replacements[i]}" selected>${replacements[i]}</option>`)
+          .appendTo(`#${parentId}`);
+      } else {
+        $(`<option value="${replacements[i]}">${replacements[i]}</option>`)
+          .appendTo(`#${parentId}`);
+      }
+    }
+  }
+
+  function getFileData (file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsText(file);
+      reader.onload = function () {
+        resolve(reader.result);
+      }
+      reader.onerror = function (error) {
+        reject(error);
+      }
+    })
+  }
+
+  function generateReplacementDownload (file) {
+    getFileData(file).then(fileData => {
+      $('#select_file').css('display', 'none')
+      const data = JSON.parse(fileData);
+      console.log(fileData);
+      const formattedData = iterateEvents(data);
+      const faceDrawPages = JSON.stringify(formattedData.displayPages);
+      $('#append_json').text(faceDrawPages);
+      $('#upload_data').val(fileData);
+      appendReplacements(formattedData.replaceNames, 'old_name');
+      appendReplacements(formattedData.replaceIndices, 'old_face_index');
+      $('#append_json_container').css('display', 'block');
+      $('#form_container').css('display', 'block');
+    })
+  }
+
+  $('#select_file').change((e) => {
+    const file = e.target.files[0];
+    if (file.type === 'application/json') {
+      generateReplacementDownload(file);
+    } else {
+      // appendWrongFileTypeNotificaiton();
+    }
+  })
+</script>
