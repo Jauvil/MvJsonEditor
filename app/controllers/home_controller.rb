@@ -9,6 +9,6 @@ class HomeController < ApplicationController
   private
 
   def upload_params
-    params.require(:upload).permit(:new_name, :new_face_index, :old_name, :old_face_index, :data)
+    params.require(:upload).permit(:new_name, :new_face_index, :replace, :data)
   end
 end

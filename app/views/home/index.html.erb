@@ -5,7 +5,20 @@
     </div>
   </div>
   <hr>
-  <div class="row mt-3">
+  <div class="d-flex flex-column align-items-center">
+    <div>
+      <p>Upload a map JSON file to have all <em>faceDraw</em> event page list items parsed.</p>
+      <p>Select which scoped parameters you would like to replace.</p>
+      <p>The unique scope for Harold's face below would be <strong>File: Actor1, Index: 0</strong></p>
+    </div>
+    <div>
+      <%= image_tag 'indices_example.png' %>
+    </div>
+    <div>
+      <small>Example face file indicies locations</small>
+    </div>
+  </div>
+  <div class="row mt-3 mb-5">
     <div class="col-12">
       <div id="append_json_container" style="display: none;">
         <h5>
@@ -13,8 +26,8 @@
         </h5>
         <code id="append_json" class="overflow-auto">
         </code>
+        <hr>
       </div>
-      <hr>
       <div id="form_container" class="mt-3" style="display: none;">
         <%= form_tag('/generate_json', method: :post) do %>
           <div class="form-group">
@@ -28,13 +41,8 @@
           </div>
 
           <div class="form-group">
-            <%= label_tag :old_name, 'Old Face Asset File Name' %>
-            <%= select_tag 'upload[old_name]', nil, class: 'form-control col-6', id: 'old_name' %>
-          </div>
-
-          <div class="form-group">
-            <%= label_tag :old_face_index, 'Old Face Index' %>
-            <%= select_tag 'upload[old_face_index]', nil, class: 'form-control col-6', id: 'old_face_index' %>
+            <%= label_tag :old_name, 'Face Asset To Replace (File, Index)' %>
+            <%= select_tag 'upload[replace]', nil, class: 'form-control col-6' %>
           </div>
 
           <%= hidden_field_tag('upload[data]') %>
@@ -52,8 +60,7 @@
 <script>
   function iterateEvents(data) {
     const pagesWithFacesDrawn = [];
-    const replaceFileNames = [];
-    const replaceFileIndices = [];
+    const replaceValues = [];
     const events = data.events;
     for(let i = 0; i < events.length; i++) {
       if (!events[i]) { continue; }
@@ -66,8 +73,10 @@
           if (item.code == 101) {
             pagesWithFacesDrawn.push(page);
             if (item.parameters[0] !== '') {
-              replaceFileNames.push(item.parameters[0]);
-              replaceFileIndices.push(item.parameters[1]);
+              const replaceValue = [item.parameters[0], item.parameters[1]];
+              if (!replaceValues.includes(replaceValue)) {
+                replaceValues.push(replaceValue);
+              }
             }
           }
         }
@@ -75,21 +84,22 @@
     }
     return {
       displayPages: pagesWithFacesDrawn,
-      replaceNames: replaceFileNames,
-      replaceIndices: replaceFileIndices
+      replaceValues: replaceValues
     };
   }
 
-  function appendReplacements(replacements, parentId) {
+  function appendReplacements(replacements) {
     console.log(replacements);
     for(let i = 0; i < replacements.length; i++) {
-      if ( i < 1) {
-        $(`<option value="${replacements[i]}" selected>${replacements[i]}</option>`)
-          .appendTo(`#${parentId}`);
-      } else {
-        $(`<option value="${replacements[i]}">${replacements[i]}</option>`)
-          .appendTo(`#${parentId}`);
-      }
+      console.log('replacement', replacements[i]);
+      const stringValue = `File: ${replacements[i][0]}, Index: ${replacements[i][1]}`;
+      // if ( i < 1) {
+      //   $(`<option value="${stringValue}" selected>File: ${replacements[i][0]}, Index: ${replacements[i][1]}</option>`)
+      //     .appendTo('#upload_replace');
+      // } else {
+        $(`<option value="${stringValue}">${stringValue}</option>`)
+          .appendTo('#upload_replace');
+      // }
     }
   }
 
@@ -115,8 +125,7 @@
       const faceDrawPages = JSON.stringify(formattedData.displayPages);
       $('#append_json').text(faceDrawPages);
       $('#upload_data').val(fileData);
-      appendReplacements(formattedData.replaceNames, 'old_name');
-      appendReplacements(formattedData.replaceIndices, 'old_face_index');
+      appendReplacements(formattedData.replaceValues);
       $('#append_json_container').css('display', 'block');
       $('#form_container').css('display', 'block');
     })
